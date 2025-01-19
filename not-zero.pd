@@ -1,0 +1,10 @@
+#N canvas 514 444 450 300 12;
+#X obj 117 55 inlet;
+#X obj 116 161 outlet;
+#X floatatom 117 79 5 0 0 0 - - - 0;
+#X obj 116 107 expr if($f1 != 0 \, 1 \, 0);
+#X floatatom 116 131 5 0 0 0 - - - 0;
+#X connect 0 0 2 0;
+#X connect 2 0 3 0;
+#X connect 3 0 4 0;
+#X connect 4 0 1 0;

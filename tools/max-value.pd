@@ -1,0 +1,18 @@
+#N canvas 353 391 450 300 12;
+#X obj 93 43 inlet;
+#X obj 252 50 inlet;
+#X obj 98 129 expr if($f1 > $f2 \, $f2 \, $f1);
+#X obj 99 199 outlet;
+#X floatatom 132 155 5 0 0 0 - - - 0;
+#X msg 252 74 \$1;
+#X floatatom 252 98 5 0 0 0 - - - 0;
+#X msg 302 53 1;
+#X obj 302 25 loadbang;
+#X connect 0 0 2 0;
+#X connect 1 0 5 0;
+#X connect 2 0 3 0;
+#X connect 2 0 4 0;
+#X connect 5 0 6 0;
+#X connect 6 0 2 1;
+#X connect 7 0 5 0;
+#X connect 8 0 7 0;

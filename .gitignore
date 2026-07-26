@@ -1,3 +1,52 @@
+# ---------------------------------------------------------------------
+# Pure Data and the trailing-tilde problem
+#
+# Pd signal objects end in "~" -- freeverb~, output~, multiosc~ -- so
+# external directories get names like "externals/freeverb~". The usual
+# editor-backup rule "*~" (which is line 1 of ~/.gitignore_global)
+# silently swallows those: externals/freeverb~ was invisible to git,
+# never even showing up as untracked.
+#
+# Re-include DIRECTORIES ending in ~, and keep ignoring backup FILES by
+# their full suffix instead. Order matters -- later rules win.
+# ---------------------------------------------------------------------
+!*~/
+*.pd~
+*.pd-bak
+*.pd.bak
+*.bak
+*.orig
+
+# ---------------------------------------------------------------------
+# Audio. Sampler patches reference material kept outside the repo, so a
+# missing sample is expected rather than a bug.
+# writesf~ recordings are covered by these too.
+# ---------------------------------------------------------------------
 *.mp3
 *.wav
 *.ogg
+*.aif
+*.aiff
+*.flac
+*.m4a
+*.caf
+
+# ---------------------------------------------------------------------
+# NOT ignored, deliberately: externals/ is vendored with its binaries
+# (*.pd_darwin, *.d_fat, *.dylib). That is what lets the repo be cloned
+# onto another machine and just run, without rebuilding anything.
+# ---------------------------------------------------------------------
+
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# Editors
+*.swp
+*.swo
+.vscode/
+.idea/

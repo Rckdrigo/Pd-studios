@@ -42,7 +42,7 @@
 #X text 335 440 vu is fed env~ minus 100 \, the standard Pd idiom. Its red zone is your clip warning -- the trims reach 2.0 \, which is +6 dB \, so this is easy to hit.;
 #X text 870 172 With only two bands \, the two mutes give you solo for free: mute the mains to solo the sub \, which is how you check the crossover point by ear.;
 #X text 870 340 To bind a knob: tick learn \, move the knob \, untick. It binds that CC only and ignores every other control.;
-#X text 620 490 WARNING: Low-Hit-Balancer.pd puts its TOPS on ch 3 \, where this patch puts the SUB. Do not run both until the physical output map is settled.;
+#X text 620 490 Output map \, now the only one in the repo: mains on ch 1/2 \, mono sub on ch 3. Low-Hit-Balancer.pd was a duplicate of this patch that claimed ch 3 for its tops \; it was deleted rather than reconciled.;
 #X text 620 550 Trims MUST init: the *~ right inlets are signals \, so an unset line~ outputs 0 = silence. The loadbang above is load-bearing.;
 #X connect 0 0 1 0;
 #X connect 0 1 2 0;

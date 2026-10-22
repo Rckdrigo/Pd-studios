@@ -1,0 +1,10 @@
+#N canvas 40 40 360 200 12;
+#X text 120 20 [ddj-note note ch] - velocity of one note on one channel. notein only filters by channel;
+#X obj 20 20 notein \$2;
+#X obj 20 60 pack 0 0;
+#X obj 20 100 route \$1;
+#X obj 20 140 outlet;
+#X connect 1 0 2 0;
+#X connect 1 1 2 1;
+#X connect 2 0 3 0;
+#X connect 3 0 4 0;

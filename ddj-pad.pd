@@ -1,0 +1,8 @@
+#N canvas 40 40 360 200 12;
+#X text 120 20 [ddj-pad ch] - note number of each pad press on one channel (releases dropped);
+#X obj 20 20 notein \$1;
+#X obj 20 60 stripnote;
+#X obj 20 100 outlet;
+#X connect 1 0 2 0;
+#X connect 1 1 2 1;
+#X connect 2 0 3 0;

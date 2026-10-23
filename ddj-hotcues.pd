@@ -1,5 +1,5 @@
 #N canvas 40 40 1200 900 12;
-#X text 20 5 [ddj-hotcues N] - 8 hot cue pads for deck N. inlets: phasor~ phase \, length \, samplerate \, track bpm \, first beat (s). outlet: phase to jump to. sends lights-step (16th note on the track grid) while this deck leads the light show;
+#X text 20 5 [ddj-hotcues N] - 8 hot cue pads for deck N. inlets: phasor~ phase \, length \, samplerate \, track bpm \, first beat (s). outlet: phase to jump to. sends lights-step (16th note on the track grid \, wrapped to 0-127 = 8 bars so the grid also runs before the detected first beat) while this deck leads the light show;
 #X obj 20 40 inlet~;
 #X obj 160 40 inlet;
 #X obj 300 40 inlet;
@@ -9,7 +9,7 @@
 #X obj 20 100 snapshot~;
 #X obj 20 130 t f f;
 #X obj 100 160 v \$0-pos;
-#X obj 20 190 expr if(\$f4>0 \, floor((\$f1*\$f2/max(\$f3 \, 1)-\$f5)*\$f4/15) \, -1);
+#X obj 20 190 expr if(\$f4>0 \, fmod(fmod(floor((\$f1*\$f2/max(\$f3 \, 1)-\$f5)*\$f4/15) \, 128)+128 \, 128) \, -1);
 #X obj 20 220 change;
 #X obj 20 250 spigot;
 #X obj 20 280 s lights-step;
@@ -43,7 +43,7 @@
 #X msg 900 190 -1;
 #X msg 980 190 set -2;
 #X obj 20 500 r d\$1-hotcue-on;
-#X obj 20 525 - 1;
+#X obj 20 525 expr if(padmode\$1 \, -1 \, \$f1-1);
 #X obj 20 550 moses 8;
 #X obj 20 575 moses 0;
 #X obj 80 600 t f f;
@@ -65,7 +65,7 @@
 #X msg 300 780 127;
 #X obj 300 805 s d\$1-play;
 #X obj 500 500 r d\$1-hotcue-off;
-#X obj 500 525 - 1;
+#X obj 500 525 expr if(padmode\$1 \, -1 \, \$f1-1);
 #X obj 500 550 moses 8;
 #X obj 500 575 moses 0;
 #X obj 500 600 t b b f;

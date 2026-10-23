@@ -42,9 +42,19 @@
   .readout { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 8px; color: var(--mute) }
   .readout b { font-size: 32px; font-weight: 600; line-height: 1.1; color: var(--text) }
   .bar { position: relative; height: 32px; background: var(--well); border: 1px solid var(--line); border-radius: 5px; cursor: pointer; touch-action: none; overflow: hidden }
+  .bar .wave { position: absolute; inset: 0; width: 100%; height: 100% }
+  .zoombox { position: relative; margin-top: 6px }
+  .zoom { display: block; width: 100%; height: 96px; box-sizing: border-box; background: var(--well); border: 1px solid var(--line); border-radius: 5px }
+  .zoombox .zoomctl { position: absolute; top: 4px; right: 4px; display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--mute) }
+  .zoombox .zoomctl button { width: 26px; padding: 2px 0 }
   .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: color-mix(in srgb, var(--c) 45%, transparent); border-right: 2px solid var(--c) }
   .bar .tick { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--cue); font: normal 10px/1 system-ui, sans-serif }
   .bar .tick::after { content: attr(data-n); position: absolute; top: 2px; left: 4px; color: var(--cue) }
+  .bar .loop { --loop: #3fd28b; position: absolute; top: 0; bottom: 0; box-sizing: border-box; border: 2px solid var(--loop); border-width: 0 2px; background: color-mix(in srgb, var(--loop) 15%, transparent); font: 600 9px/1 system-ui, sans-serif; color: var(--loop) }
+  .bar .loop.on { background: color-mix(in srgb, var(--loop) 35%, transparent) }  /* looping */
+  .bar .loop.open { border-right: 0 }  /* IN set, waiting for OUT */
+  .bar .loop::before { content: 'IN'; position: absolute; bottom: 3px; right: calc(100% + 3px) }  /* outside, so a short loop stays readable */
+  .bar .loop:not(.open)::after { content: 'OUT'; position: absolute; bottom: 3px; left: calc(100% + 3px) }
   .bar .hint { display: none; position: absolute; right: 8px; top: 8px; font-size: 11px; color: var(--mute) }
   .deck.playing .bar .hint { display: block }
   .transport { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 10px 0 }
@@ -85,7 +95,9 @@
   .setup { display: flex; flex-direction: column; gap: 8px }
   .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
   .modes button { padding: 8px 4px; font-size: 11px; text-transform: uppercase }
-  .modes button.on { background: var(--text); color: var(--bg) }
+  .modes button.on, .padmodes button.on { background: var(--text); color: var(--bg) }
+  .padmodes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 6px }
+  .padmodes button { padding: 5px 4px; font-size: 11px; text-transform: uppercase }
   .keys { margin: 4px 0 0; color: var(--mute); font-size: 11px }
   canvas { width: 100%; height: 120px; display: block; background: var(--well); border-radius: 5px }
 
@@ -143,7 +155,7 @@
       <div class="setup">
         <h2>Pad lights</h2><div class="modes" id="modes"></div>
         <button id="calibrate">CALIBRATE</button>
-        <p class="keys">Keys: ↑ ↓ browse · A / B load · / search</p>
+        <p class="keys">Keys: ↑ ↓ browse, A / B load, / search</p>
       </div>
     </details>
   </div>
@@ -163,12 +175,14 @@
 </dialog>
 
 <template id="deckTpl">
-  <div class="top"><span class="letter"></span><span class="title">—</span><button class="eject">EJECT</button></div>
-  <div class="readout num"><b data-v="left">−0:00</b><span><span data-v="time">0:00</span> / <span data-v="length">0:00</span></span><span><span data-v="bpm">—</span> BPM</span><span data-v="rate">0.0%</span></div>
-  <div class="bar"><div class="fill"></div><span class="hint">hold to seek</span></div>
+  <div class="top"><span class="letter"></span><span class="title">No track</span><button class="eject">EJECT</button></div>
+  <div class="readout num"><b data-v="left">−0:00</b><span><span data-v="time">0:00</span> / <span data-v="length">0:00</span></span><span><span data-v="bpm">-</span> BPM</span><span data-v="rate">0.0%</span></div>
+  <div class="bar"><canvas class="wave"></canvas><div class="fill"></div><div class="loop" hidden></div><span class="hint">hold to seek</span></div>
+  <div class="zoombox"><canvas class="zoom"></canvas><div class="zoomctl"><button data-z="2" title="zoom out">−</button><span class="zoomspan"></span><button data-z="0.5" title="zoom in">+</button></div></div>
   <div class="transport">
     <button data-k="shift" title="next pad tap deletes its cue">SHIFT</button><button data-k="cue">CUE</button><button data-k="play">PLAY</button><button data-k="sync">SYNC</button><button data-k="pfl" title="headphone cue">PHONES</button>
   </div>
+  <div class="padmodes"><button data-pm="0">Hot cue</button><button data-pm="1">Beat loop</button><button data-pm="2">Loop roll</button><button data-pm="3">Manual</button></div>
   <div class="pads"></div>
   <div class="knobs">
     <div>LOW<div class="meter bi"><i data-m="loweq"></i></div></div><div>MID<div class="meter bi"><i data-m="mideq"></i></div></div>
@@ -193,6 +207,12 @@
   const toggle = (b, on) => { b.classList.toggle('on', on); b.setAttribute('aria-pressed', on) }
   const throttle = (fn, ms = 40) => { let t = 0; return (...a) => { const now = Date.now(); if (now - t >= ms) { t = now; fn(...a) } } }
 
+  // pad modes (ddj-loops): beat loop / loop roll sizes in beats
+  const padLabels = [[1, 2, 3, 4, 5, 6, 7, 8], ['1/4', '1/2', 1, 2, 4, 8, 16, 32], ['1/16', '1/8', '1/4', '1/2', 1, 2, 4, 8], ['IN', 'OUT', 'RELOOP', '', '', '', '', '']]
+  const padTitles = ['tap: set / jump to cue · SHIFT, shift-click or right-click: delete',
+    'tap: loop this many beats · tap the lit pad, SHIFT or right-click: exit', 'hold: roll this many beats, the track carries on underneath',
+    'IN: loop start here · OUT: loop end here, starts looping · RELOOP: exit, or jump back into the loop']
+
   // decks; SHIFT latches for one pad tap (touch has no shift key), like holding SHIFT on the controller
   const shift = { 1: false, 2: false }
   for (const d of [1, 2]) {
@@ -202,12 +222,14 @@
     for (let i = 1; i <= 8; i++) {
       const b = document.createElement('button')
       b.textContent = i
-      b.title = 'tap: set / jump to cue · SHIFT, shift-click or right-click: delete'
-      b.onclick = (e) => {
+      b.onpointerdown = (e) => {
+        if (e.button) return
+        b.setPointerCapture(e.pointerId)
         send(`d${d}-hotcue-${e.shiftKey || shift[d] ? 'off' : 'on'} ${i}`)
         shift[d] = false
         dirty = true
       }
+      b.onpointerup = () => send(`d${d}-pad-up ${i}`)  // ends a loop roll
       b.oncontextmenu = (e) => { e.preventDefault(); send(`d${d}-hotcue-off ${i}`) }
       $('.pads', el).append(b)
       const t = document.createElement('i')
@@ -222,6 +244,9 @@
       }
     })
     $('.eject', el).onclick = () => send(`d${d}-eject`)
+    el.querySelectorAll('.zoomctl button').forEach((b) => (b.onclick = () => { zoomSpan[d] = Math.min(Math.max(zoomSpan[d] * b.dataset.z, 1), 32) }))
+    $('.zoom', el).onwheel = (e) => { e.preventDefault(); zoomSpan[d] = Math.min(Math.max(zoomSpan[d] * (e.deltaY > 0 ? 1.25 : 0.8), 1), 32) }
+    el.querySelectorAll('.padmodes button').forEach((b) => (b.onclick = () => send(`d${d}-padmode ${b.dataset.pm}`)))
     // a paused deck seeks on tap; a playing one only after a 300 ms hold, so a stray touch can't jump the track
     const bar = $('.bar', el)
     let armedAt = 0
@@ -238,19 +263,108 @@
     bar.onpointerup = (e) => { if (Date.now() >= armedAt) seek(e) }
   }
 
+  // waveforms: dN-wave = peak bins from [ddj-wave], 100 per second spread evenly over the track
+  const binMax = (w, a, b) => { let m = 0; for (let i = Math.max(a | 0, 0); i < Math.min(Math.ceil(b), w.length); i++) m = Math.max(m, w[i]); return m }
+  const fit = (cv) => {
+    const dpr = devicePixelRatio || 1, W = Math.round(cv.clientWidth * dpr), H = Math.round(cv.clientHeight * dpr)
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H }
+    return [cv.getContext('2d'), W, H]
+  }
+  const loudestOf = new WeakMap()   // loudest bin per waveform, so every track fills the height
+  const loudest = (w) => { if (!loudestOf.has(w)) loudestOf.set(w, w.reduce((m, x) => Math.max(m, x), 0)); return loudestOf.get(w) }
+  // mirrored peaks: x -> bin range [from(x), from(x + 1))
+  function drawPeaks(g, W, H, w, from, alpha) {
+    const t = loudest(w)
+    if (!t) return
+    g.globalAlpha = alpha
+    for (let x = 0; x < W; x++) {
+      const h = Math.max(binMax(w, from(x), Math.max(from(x + 1), from(x) + 1)) / t * H * 0.9, 1)
+      g.fillRect(x, (H - h) / 2, 1, h)
+    }
+    g.globalAlpha = 1
+  }
+  function paintWave(el, w) {
+    const cv = $('.wave', el), [g, W, H] = fit(cv)
+    if (cv.drawn === w && cv.drawnW === W) return
+    cv.drawn = w; cv.drawnW = W
+    g.clearRect(0, 0, W, H)
+    g.fillStyle = getComputedStyle(el).getPropertyValue('--c')
+    drawPeaks(g, W, H, w, (x) => x * w.length / W, 0.55)
+  }
+
+  // zoom: a few seconds around the playhead, scrolling. Pd reports the position 20 times a second,
+  // so between reports it is moved on from the play rate
+  const zoomSpan = { 1: 4, 2: 4 }   // seconds shown
+  const last = { 1: {}, 2: {} }
+  function paintZoom(d) {
+    const el = $(`#deck${d}`), k = (key) => `d${d}-${key}`, w = S[k('wave')] ?? []
+    const cv = $('.zoom', el), [g, W, H] = fit(cv)
+    g.clearRect(0, 0, W, H)
+    const len = w.length / 100   // seconds
+    $('.zoomspan', el).textContent = `${zoomSpan[d]} s`
+    if (!len) return
+    const L = last[d], pos = S[k('pos')]
+    if (L.pos !== pos) { L.pos = pos; L.p = v(k('pos')) ?? 0; L.t = performance.now() }
+    const ahead = v(k('play')) ? Math.min((performance.now() - L.t) / 1000, 0.2) * (v(k('rate')) ?? 1) : 0
+    const now = L.p * len + ahead, span = zoomSpan[d], t0 = now - span / 2
+    const X = (t) => (t - t0) / span * W          // seconds -> px
+    const st = getComputedStyle(el), c = st.getPropertyValue('--c'), cue = st.getPropertyValue('--cue')
+    // loop region
+    const a = v(k('loopin')) ?? -1, b = v(k('loopout')) ?? -1
+    if (a >= 0) {
+      g.fillStyle = '#3fd28b'
+      g.globalAlpha = v(k('padmode')) === 3 && v(k('looppad')) === 2 ? 0.25 : 0.12
+      if (b > a) g.fillRect(X(a * len), 0, X(b * len) - X(a * len), H)
+      g.globalAlpha = 1
+      g.fillRect(X(a * len) - 1, 0, 2, H)
+      if (b > a) g.fillRect(X(b * len) - 1, 0, 2, H)
+    }
+    // beat grid: bars brighter than beats
+    const bpm = v(k('tbpm')) ?? 0, fb = v(k('firstbeat')) ?? 0
+    if (bpm > 0) {
+      const beat = 60 / bpm
+      for (let n = Math.ceil((t0 - fb) / beat); fb + n * beat < t0 + span; n++) {
+        g.fillStyle = n % 4 ? 'rgba(255,255,255,.12)' : 'rgba(255,255,255,.35)'
+        g.fillRect(Math.round(X(fb + n * beat)), 0, 1, H)
+      }
+    }
+    // peaks: played part dimmer
+    g.fillStyle = c
+    const from = (x) => (t0 + x / W * span) * 100
+    const mid = Math.round(W / 2)
+    g.save(); g.beginPath(); g.rect(0, 0, mid, H); g.clip()
+    drawPeaks(g, W, H, w, from, 0.4)
+    g.restore(); g.save(); g.beginPath(); g.rect(mid, 0, W - mid, H); g.clip()
+    drawPeaks(g, W, H, w, from, 0.9)
+    g.restore()
+    // hot cues
+    const dpr = devicePixelRatio || 1
+    g.font = `${10 * dpr}px system-ui, sans-serif`
+    g.fillStyle = cue;
+    (S[k('cues')] ?? []).forEach((q, i) => {
+      if (!(q > 0)) return
+      g.fillRect(X((q - 1) * len) - 1, 0, 2, H)
+      g.fillText(i + 1, X((q - 1) * len) + 3, 11 * dpr)
+    })
+    // playhead
+    g.fillStyle = '#fff'
+    g.fillRect(mid - 1, 0, 2, H)
+  }
+
   function paintDeck(d) {
     const el = $(`#deck${d}`), k = (key) => `d${d}-${key}`
     const title = v(k('title')), playing = !!v(k('play'))
     el.classList.toggle('playing', playing)
     el.classList.toggle('shift', shift[d])
-    $('.title', el).textContent = title && title !== '-' ? name(title) : '—'
+    $('.title', el).textContent = title && title !== '-' ? name(title) : 'No track'
     $('[data-v=time]', el).textContent = v(k('time')) ?? '0:00'
     $('[data-v=length]', el).textContent = v(k('length')) ?? '0:00'
     const left = Math.max(secs(v(k('length'))) - secs(v(k('time'))), 0)
     $('[data-v=left]', el).textContent = `−${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
-    $('[data-v=bpm]', el).textContent = v(k('bpm')) || '—'
+    $('[data-v=bpm]', el).textContent = v(k('bpm')) || '-'
     const rate = ((v(k('rate')) ?? 1) - 1) * 100
     $('[data-v=rate]', el).textContent = `${rate > 0 ? '+' : ''}${rate.toFixed(1)}%`
+    paintWave(el, S[k('wave')] ?? [])
     $('.fill', el).style.width = `${(v(k('pos')) ?? 0) * 100}%`
     $('.eject', el).disabled = playing
     $('.eject', el).title = playing ? 'pause the deck to eject' : ''
@@ -260,14 +374,24 @@
     toggle($('[data-k=shift]', el), shift[d])
     const cues = S[k('cues')] ?? []   // ddjhcN stores cue phase + 1, 0 = empty
     const lights = S['pad-lights'] ?? []
+    const mode = v(k('padmode')) ?? 0, loopPad = v(k('looppad')) ?? 0
+    el.querySelectorAll('.padmodes button').forEach((b) => toggle(b, +b.dataset.pm === mode))
     el.querySelectorAll('.pads button').forEach((b, i) => {
-      b.classList.toggle('on', cues[i] > 0)
+      b.textContent = padLabels[mode][i]
+      b.title = padTitles[mode]
+      b.classList.toggle('on', mode ? loopPad === i + 1 : cues[i] > 0)
       b.classList.toggle('lit', lights[(d - 1) * 8 + i] > 0)
     })
     el.querySelectorAll('.tick').forEach((t, i) => {
-      t.hidden = !(cues[i] > 0)
+      t.hidden = mode || !(cues[i] > 0)
       t.style.left = `${(cues[i] - 1) * 100}%`
     })
+    const a = v(k('loopin')) ?? -1, b = v(k('loopout')) ?? -1, loop = $('.loop', el)  // manual loop IN / OUT, -1 = not set
+    loop.hidden = a < 0
+    loop.classList.toggle('open', !(b > a))
+    loop.classList.toggle('on', mode === 3 && loopPad === 2)
+    loop.style.left = `${a * 100}%`
+    loop.style.width = b > a ? `${(b - a) * 100}%` : '0'
     el.querySelectorAll('[data-m]').forEach((m) => {
       const x = (v(k(m.dataset.m)) ?? (m.dataset.m === 'volume' ? 0 : 64)) / 127
       if (m.dataset.m === 'volume') m.style.width = `${x * 100}%`
@@ -416,9 +540,11 @@
       $('#conn').textContent = v('pd') ? 'Pd running' : 'Pd not connected'
       paintDeck(1); paintDeck(2); paintMixer(); paintModes(); paintScope(); markSel(); paintLoadButtons()
     }
+    paintZoom(1); paintZoom(2)   // every frame: it scrolls
     requestAnimationFrame(paint)
   }
   requestAnimationFrame(paint)
+  addEventListener('resize', () => (dirty = true))  // redraw the waveforms at the new width
 
   const events = new EventSource('/events')
   events.onmessage = (e) => {

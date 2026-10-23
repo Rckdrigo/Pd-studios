@@ -4,9 +4,9 @@
 import http from 'node:http'
 import net from 'node:net'
 import { spawn } from 'node:child_process'
-import { readFile, readdir, writeFile, stat } from 'node:fs/promises'
+import { readFile, readdir, writeFile, realpath } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PD_PORT = +process.env.PD_PORT || 9010
@@ -99,8 +99,8 @@ connectPd()
 
 // the page may only send what the controller could send
 const allowed = [
-  /^d[12]-(play|cue|sync|eject|hotcue-on|hotcue-off|seek-to)( -?[\d.]+)?$/,
-  /^(master-crossfader|master-trfx|lights-mode)( -?[\d.]+)$/,
+  /^d[12]-(play|cue|sync|eject|hotcue-on|hotcue-off|pad-up|padmode|seek-to|pfl)( -?[\d.]+)?$/,
+  /^(master-crossfader|master-trfx|master-headmix|lights-mode)( -?[\d.]+)$/,
   /^ddj-calibrate$/,
   /^web-browser (select \d+|load [12] \d+)$/,
 ]
@@ -111,16 +111,29 @@ async function readBody(req) {
   return body
 }
 
+// the folder browser stays inside your home folder
+const home = homedir()
+async function inHome(path) {
+  const real = await realpath(path)
+  if (real !== home && !real.startsWith(home + sep)) throw new Error('outside home')
+  return real
+}
+
 async function listDirs(path) {
   const entries = await readdir(path, { withFileTypes: true })
   const dirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith('.')).map((e) => e.name)
   const audio = entries.filter((e) => e.isFile() && /\.(wav|aiff?)$/i.test(e.name)).length
-  return { path, parent: dirname(path), dirs: dirs.sort((a, b) => a.localeCompare(b)), audio }
+  return { path, parent: path === home ? path : dirname(path), dirs: dirs.sort((a, b) => a.localeCompare(b)), audio }
 }
+
+// only this Mac or a device on the Wi-Fi using its address: refuse other websites (cross-site requests, DNS rebinding)
+const hostOk = (host = '') => /^(localhost|127\.0\.0\.1|\[::1\]|\d+\.\d+\.\d+\.\d+|[\w-]+\.local)(:\d+)?$/.test(host)
+const originOk = (req) => !req.headers.origin || new URL(req.headers.origin).host === req.headers.host
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x')
   const json = (code, data) => res.writeHead(code, { 'content-type': 'application/json' }).end(JSON.stringify(data))
+  if (!hostOk(req.headers.host) || (req.method === 'POST' && !originOk(req))) return res.writeHead(403).end()
   try {
     if (url.pathname === '/events') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' })
@@ -133,18 +146,18 @@ http.createServer(async (req, res) => {
       if (ok) toPd(body)
       res.writeHead(ok ? 204 : 400).end()
     } else if (req.method === 'POST' && url.pathname === '/folder') {
-      const path = (await readBody(req)).trim()
-      if (!pd || !(await stat(path)).isDirectory()) return json(400, { error: 'not a folder' })
+      const path = await inHome((await readBody(req)).trim())
+      if (!pd) return json(400, { error: 'Pd not connected' })
       toPd(`web-browser folder ${escape(path)}`)
       await writeFile(folderFile, path)
       json(200, { ok: true })
     } else if (url.pathname === '/dirs') {
       const saved = await readFile(folderFile, 'utf8').catch(() => '')
-      json(200, await listDirs(url.searchParams.get('path') || saved || join(homedir(), 'Music')))
+      json(200, await listDirs(await inHome(url.searchParams.get('path') || saved || join(home, 'Music'))))
     } else {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(await readFile(page))
     }
   } catch (err) {
-    json(404, { error: err.message })
+    json(404, { error: 'not found' })
   }
 }).listen(WEB_PORT, () => console.log(`DJ page on http://localhost:${WEB_PORT}`))

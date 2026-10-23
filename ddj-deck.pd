@@ -298,6 +298,8 @@
 #X msg 2100 785 set \$1;
 #X text 1700 730 on-screen PLAY / CUE / SYNC: same as the controller buttons \, lit from the deck state;
 #X obj 480 620 send~ d\$1-audio;
+#X obj 1500 40 ddj-note 103 \$1;
+#X text 1500 10 jog touch with SHIFT held (note 103) also counts as touching \, so the synced deck stops chasing this one while you move it;
 #X connect 2 0 5 0;
 #X connect 7 0 8 0;
 #X connect 8 0 9 0;
@@ -726,4 +728,5 @@
 #X connect 205 1 296 0;
 #X connect 296 0 289 0;
 #X connect 158 0 298 0;
+#X connect 299 0 96 0;
 #X coords 0 -1 1 1 320 150 2 0 0;

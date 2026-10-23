@@ -1,0 +1,16 @@
+#N canvas 40 40 700 260 12;
+#X text 20 5 [ddj-eqband deck band] - level of one band as a level 0-4 written to eqh<deck>[band]. compared to its own peak (falls 0.15 dB per frame) so it pulses at any volume. under 45 dB = dark;
+#X obj 20 40 inlet~;
+#X obj 20 70 env~ 2048 1024;
+#X obj 20 100 expr max(\$f1 \, \$f2-0.15) \; if(\$f1<45 \, 0 \, if(\$f1>max(\$f1 \, \$f2-0.15)-2 \, 4 \, if(\$f1>max(\$f1 \, \$f2-0.15)-5 \, 3 \, if(\$f1>max(\$f1 \, \$f2-0.15)-9 \, 2 \, if(\$f1>max(\$f1 \, \$f2-0.15)-14 \, 1 \, 0)))));
+#X obj 20 160 tabwrite eqh\$1;
+#X obj 400 40 loadbang;
+#X obj 400 70 f \$2;
+#X obj 20 130 t f;
+#X connect 1 0 2 0;
+#X connect 2 0 3 0;
+#X connect 3 0 7 0;
+#X connect 7 0 3 1;
+#X connect 3 1 4 0;
+#X connect 5 0 6 0;
+#X connect 6 0 4 1;

@@ -7,7 +7,7 @@
 #X obj 360 270 ddj-mixer;
 #X obj 20 270 ddj-browser;
 #X obj 720 400 scope;
-#X text 20 500 controller: jog edge = browse songs \, SHIFT+jog = move in the song \, touch the top = scratch \, SYNC = beat sync \, SHIFT+SYNC = load into a paused deck \, TRANSITION FX = echo on the deck you fade out \, CFX = filter \, pads = hot cues;
+#X text 20 500 controller: jog edge = browse songs \, SHIFT+jog = move in the song \, touch the top = scratch \, SYNC = beat sync \, SHIFT+SYNC = load into a paused deck \, TRANSITION FX = echo on the deck you fade out \, CFX = filter \, pads = hot cues \, CUE 1 / CUE 2 = previous / next light mode \, MASTER CUE = lights off / on;
 #X connect 3 0 5 0;
 #X connect 3 1 5 1;
 #X connect 4 0 5 2;

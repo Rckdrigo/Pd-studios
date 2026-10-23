@@ -8,7 +8,7 @@
 #X symbolatom 400 30 30 0 0 0 - - - 0;
 #X obj 250 186 bng 20 250 50 0 empty empty A 24 10 0 12 #ffffff #000000 #000000;
 #X obj 295 186 bng 20 250 50 0 empty empty B 24 10 0 12 #ffffff #000000 #000000;
-#X text 320 5 ddj-browser - songs from a folder shown as a 7-row list (selected song in the middle). the jog edge or the headphone CUE buttons browse. SHIFT+SYNC loads the song into that deck while it is paused;
+#X text 320 5 ddj-browser - songs from a folder shown as a 7-row list (selected song in the middle). the jog edge browses. SHIFT+SYNC loads the song into that deck while it is paused;
 #X obj 320 60 loadbang;
 #X msg 320 85 dir;
 #X obj 320 110 pdcontrol;
@@ -186,9 +186,7 @@
 #X connect 41 0 43 0;
 #X connect 42 0 44 0;
 #X connect 45 0 46 0;
-#X connect 46 1 25 0;
 #X connect 47 0 48 0;
-#X connect 48 1 26 0;
 #X connect 49 0 50 0;
 #X connect 50 1 51 0;
 #X connect 51 0 52 0;

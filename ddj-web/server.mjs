@@ -128,7 +128,11 @@ async function listDirs(path) {
 
 // only this Mac or a device on the Wi-Fi using its address: refuse other websites (cross-site requests, DNS rebinding)
 const hostOk = (host = '') => /^(localhost|127\.0\.0\.1|\[::1\]|\d+\.\d+\.\d+\.\d+|[\w-]+\.local)(:\d+)?$/.test(host)
-const originOk = (req) => !req.headers.origin || new URL(req.headers.origin).host === req.headers.host
+const originOk = (req) => {
+  const o = req.headers.origin
+  if (!o) return true
+  try { return new URL(o).host === req.headers.host } catch { return false }  // e.g. "Origin: null" from a sandboxed page
+}
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x')

@@ -64,10 +64,10 @@
 #X obj 120 560 r d2-browse;
 #X obj 20 585 - 64;
 #X obj 20 610 expr jacc\$0+\$f1;
-#X obj 20 635 expr if(\$f1>=90 \, 1 \, if(\$f1<=-90 \, -1 \, 0)) \; \$f1-90*if(\$f1>=90 \, 1 \, if(\$f1<=-90 \, -1 \, 0));
+#X obj 20 635 expr if(\$f1>=30 \, 1 \, if(\$f1<=-30 \, -1 \, 0)) \; \$f1-30*if(\$f1>=30 \, 1 \, if(\$f1<=-30 \, -1 \, 0));
 #X obj 200 660 v jacc\$0;
 #X obj 20 660 sel 0;
-#X text 20 690 jog edge: one song per 90 ticks (about 1/8 turn) - change the 90s to adjust;
+#X text 20 690 jog edge: one song per 30 ticks (about 1/24 turn) - change the 30s to adjust;
 #N canvas 0 0 520 620 rows 0;
 #X obj 20 20 inlet;
 #X obj 20 50 t b b b f;

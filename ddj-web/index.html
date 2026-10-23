@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDJ Decks</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e0e10; --card: #18181c; --line: #2a2a30; --text: #ececf0; --mute: #8b8b96;
+    --a: #00a8c6; --b: #d1009e; --play: #00a060; --cue: #ff8c00; --sync: #1e78ff; --sel: #4b2a9e;
+  }
+  * { box-sizing: border-box }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.35 system-ui, sans-serif; -webkit-user-select: none; user-select: none }
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line) }
+  header h1 { margin: 0; font-size: 15px; font-weight: 600 }
+  #conn { margin-left: auto; color: var(--mute); font-size: 13px }
+  #conn::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #c33 }
+  #conn.up::before { background: var(--play) }
+  main { display: grid; gap: 12px; padding: 12px 16px; grid-template-columns: 1fr 240px 1fr; grid-template-areas: 'a mix b' 'browser browser side' }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; grid-template-areas: 'a' 'b' 'mix' 'side' 'browser' } }
+  .card { min-width: 0; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px }
+  .card h2 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mute) }
+  .num { font-variant-numeric: tabular-nums }
+  button { font: 600 13px system-ui, sans-serif; color: var(--text); background: #26262c; border: 1px solid #34343c; border-radius: 6px; padding: 8px 10px; cursor: pointer }
+  button:active { transform: translateY(1px) }
+  button:disabled { opacity: .3; cursor: not-allowed }
+
+  /* decks */
+  .deck { border-top: 3px solid var(--c) }
+  .deck .top { display: flex; align-items: baseline; gap: 8px }
+  .deck .letter { font-weight: 700; color: var(--c) }
+  .deck .title { flex: 1; min-width: 0; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .deck .stats { display: flex; gap: 14px; margin: 6px 0 8px; color: var(--mute) }
+  .deck .stats b { color: var(--text); font-weight: 600 }
+  .bar { position: relative; height: 28px; background: #0b0b0d; border: 1px solid var(--line); border-radius: 5px; cursor: pointer; touch-action: none; overflow: hidden }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: color-mix(in srgb, var(--c) 45%, transparent); border-right: 2px solid var(--c) }
+  .bar .cue { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--cue) }
+  .transport { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 }
+  .transport .on[data-k=play] { background: var(--play); border-color: var(--play) }
+  .transport .on[data-k=sync] { background: var(--sync); border-color: var(--sync) }
+  .transport [data-k=cue] { color: var(--cue) }
+  .pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
+  .pads button { height: 40px; color: var(--mute) }
+  .pads button.on { background: color-mix(in srgb, var(--c) 70%, black); border-color: var(--c); color: #fff }
+  .knobs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; text-align: center; color: var(--mute); font-size: 11px }
+  .meter { height: 6px; margin-top: 3px; background: #0b0b0d; border-radius: 3px; overflow: hidden }
+  .meter i { display: block; height: 100%; width: 0; background: var(--c) }
+
+  /* mixer + side */
+  .mixer { display: flex; flex-direction: column; gap: 10px; grid-area: mix }
+  .vu { height: 10px; background: #0b0b0d; border-radius: 5px; overflow: hidden }
+  .vu i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--play) 70%, #e5c100 85%, #e53935) }
+  input[type=range] { width: 100%; accent-color: var(--cue) }
+  .xf-labels { display: flex; justify-content: space-between; color: var(--mute); font-weight: 700 }
+  #trfx.on { background: var(--cue); border-color: var(--cue); color: #000 }
+  .side { grid-area: side; display: flex; flex-direction: column; gap: 12px }
+  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
+  .modes button { padding: 8px 4px; font-size: 12px }
+  .modes button.on { background: var(--sel); border-color: #7a58d6 }
+  canvas { width: 100%; height: 120px; display: block; background: #0b0b0d; border-radius: 5px }
+
+  /* browser */
+  .browser { grid-area: browser; display: flex; flex-direction: column; height: 60vh; min-height: 320px }
+  .browser .tools { display: flex; gap: 8px; margin-bottom: 8px }
+  #search { flex: 1; min-width: 0; padding: 8px 10px; font: inherit; color: var(--text); background: #0b0b0d; border: 1px solid var(--line); border-radius: 6px; -webkit-user-select: text; user-select: text }
+  #folderName { color: var(--mute); font-size: 12px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  ol { flex: 1; margin: 0; padding: 0; overflow-y: auto; list-style: none; border-top: 1px solid var(--line) }
+  li { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-bottom: 1px solid #1f1f24; cursor: pointer }
+  li.sel { background: var(--sel) }
+  li .n { width: 4ch; text-align: right; color: var(--mute) }
+  li .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  li button { width: 34px; padding: 6px 0; border: 0; color: #fff }
+  li button.a { background: var(--a) }
+  li button.b { background: var(--b) }
+
+  dialog { width: min(520px, 92vw); padding: 0; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 10px }
+  dialog::backdrop { background: #000a }
+  dialog header { border: 0 }
+  #dirPath { padding: 0 16px 8px; color: var(--mute); font-size: 12px; word-break: break-all }
+  #dirs { max-height: 50vh; overflow-y: auto; border-top: 1px solid var(--line) }
+  #dirs div { padding: 9px 16px; border-bottom: 1px solid #1f1f24; cursor: pointer }
+  #dirs div:hover { background: #222228 }
+  dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px }
+</style>
+
+<header><h1>DDJ-200</h1><span id="conn">connecting…</span></header>
+<main>
+  <section class="card deck" id="deck1" style="--c: var(--a); grid-area: a"></section>
+  <section class="card deck" id="deck2" style="--c: var(--b); grid-area: b"></section>
+
+  <section class="card mixer">
+    <h2>Mixer</h2>
+    <div class="vu"><i id="vu"></i></div>
+    <div><div class="xf-labels"><span>A</span><span>B</span></div><input id="xf" type="range" min="0" max="127" value="64"></div>
+    <button id="trfx">Transition FX</button>
+    <button id="calibrate">Calibrate</button>
+  </section>
+
+  <div class="side">
+    <section class="card"><h2>Pad lights</h2><div class="modes" id="modes"></div></section>
+    <section class="card"><h2>Scope</h2><canvas id="scope" width="480" height="120"></canvas></section>
+  </div>
+
+  <section class="card browser">
+    <div class="tools"><input id="search" type="search" placeholder="Search songs…" autocomplete="off"><button id="folderBtn">Folder…</button></div>
+    <div id="folderName"></div>
+    <ol id="list"></ol>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <header><h1>Choose music folder</h1></header>
+  <div id="dirPath"></div>
+  <div id="dirs"></div>
+  <footer><button id="dlgCancel">Cancel</button><button id="dlgUse">Use this folder</button></footer>
+</dialog>
+
+<template id="deckTpl">
+  <div class="top"><span class="letter"></span><span class="title">—</span></div>
+  <div class="stats num"><span><b data-v="time">0:00</b> / <span data-v="length">0:00</span></span><span><b data-v="bpm">—</b> bpm</span><span data-v="rate">0.0%</span></div>
+  <div class="bar"><div class="fill"></div></div>
+  <div class="transport">
+    <button data-k="cue">CUE</button><button data-k="play">PLAY</button><button data-k="sync">SYNC</button><button data-k="eject">EJECT</button>
+  </div>
+  <div class="pads"></div>
+  <div class="knobs">
+    <div>LOW<div class="meter"><i data-m="loweq"></i></div></div><div>MID<div class="meter"><i data-m="mideq"></i></div></div>
+    <div>HIGH<div class="meter"><i data-m="higheq"></i></div></div><div>VOL<div class="meter"><i data-m="volume"></i></div></div>
+  </div>
+</template>
+
+<script>
+  // The page sends the same messages the DDJ-200 does (see server.mjs for the list) and shows what [ddj-web] reports.
+  const $ = (s, el = document) => el.querySelector(s)
+  const S = {}                      // latest values from Pd, e.g. S['d1-pos'] = [0.42]
+  let songs = []
+  const v = (k, i = 0) => S[k]?.[i]
+  const send = (msg) => fetch('/cmd', { method: 'POST', body: msg })
+  const name = (p) => String(p ?? '').split('/').pop().replace(/\.[^.]+$/, '')
+  const throttle = (fn, ms = 40) => { let t = 0; return (...a) => { const now = Date.now(); if (now - t >= ms) { t = now; fn(...a) } } }
+
+  // decks
+  for (const d of [1, 2]) {
+    const el = $(`#deck${d}`)
+    el.append($('#deckTpl').content.cloneNode(true))
+    $('.letter', el).textContent = d === 1 ? 'A' : 'B'
+    for (let i = 1; i <= 8; i++) {
+      const b = document.createElement('button')
+      b.textContent = i
+      b.title = 'tap: set / jump to cue · right-click or shift-click: delete'
+      b.onclick = (e) => send(`d${d}-hotcue-${e.shiftKey ? 'off' : 'on'} ${i}`)
+      b.oncontextmenu = (e) => { e.preventDefault(); send(`d${d}-hotcue-off ${i}`) }
+      $('.pads', el).append(b)
+    }
+    el.querySelectorAll('.transport button').forEach((b) => {
+      b.onclick = () => send(b.dataset.k === 'eject' ? `d${d}-eject` : `d${d}-${b.dataset.k} 127`)
+    })
+    const bar = $('.bar', el)
+    const seek = throttle((e) => {
+      const r = bar.getBoundingClientRect()
+      send(`d${d}-seek-to ${Math.min(Math.max((e.clientX - r.left) / r.width, 0), 0.999).toFixed(4)}`)
+    })
+    bar.onpointerdown = (e) => { bar.setPointerCapture(e.pointerId); seek(e) }
+    bar.onpointermove = (e) => { if (bar.hasPointerCapture(e.pointerId)) seek(e) }
+  }
+
+  function paintDeck(d) {
+    const el = $(`#deck${d}`), k = (key) => `d${d}-${key}`
+    const title = v(k('title'))
+    $('.title', el).textContent = title && title !== '-' ? name(title) : '—'
+    $('[data-v=time]', el).textContent = v(k('time')) ?? '0:00'
+    $('[data-v=length]', el).textContent = v(k('length')) ?? '0:00'
+    $('[data-v=bpm]', el).textContent = v(k('bpm')) || '—'
+    const rate = ((v(k('rate')) ?? 1) - 1) * 100
+    $('[data-v=rate]', el).textContent = `${rate > 0 ? '+' : ''}${rate.toFixed(1)}%`
+    $('.fill', el).style.width = `${(v(k('pos')) ?? 0) * 100}%`
+    $('[data-k=play]', el).classList.toggle('on', !!v(k('play')))
+    $('[data-k=sync]', el).classList.toggle('on', !!v(k('sync')))
+    const cues = S[k('cues')] ?? []
+    el.querySelectorAll('.pads button').forEach((b, i) => b.classList.toggle('on', cues[i] > 0))
+    el.querySelectorAll('[data-m]').forEach((m) => { m.style.width = `${((v(k(m.dataset.m)) ?? 0) / 127) * 100}%` })
+  }
+
+  // mixer
+  const xf = $('#xf')
+  let draggingXf = false
+  xf.oninput = throttle(() => send(`master-crossfader ${xf.value}`))
+  xf.onpointerdown = () => (draggingXf = true)
+  xf.onpointerup = () => { draggingXf = false; send(`master-crossfader ${xf.value}`) }
+  $('#trfx').onclick = () => send('master-trfx 127')
+  $('#calibrate').onclick = () => send('ddj-calibrate')
+  function paintMixer() {
+    if (!draggingXf && S['master-crossfader']) xf.value = v('master-crossfader')
+    $('#trfx').classList.toggle('on', !!v('master-trfx'))
+    $('#vu').style.width = `${Math.min(Math.max(((v('master-level') ?? 0) - 40) / 60, 0), 1) * 100}%`
+  }
+
+  // pad lights
+  const modes = ['auto', 'chase', 'ping-pong', 'fill', 'checker', 'eq', 'eq rows', 'off']
+  modes.forEach((m, i) => {
+    const b = document.createElement('button')
+    b.textContent = m
+    b.onclick = () => send(`lights-mode ${i}`)
+    $('#modes').append(b)
+  })
+  const paintModes = () => $('#modes').querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === (v('lights-mode') ?? 0)))
+
+  // scope
+  const cv = $('#scope'), ctx = cv.getContext('2d')
+  function paintScope() {
+    const data = S.scope ?? []
+    ctx.clearRect(0, 0, cv.width, cv.height)
+    ctx.strokeStyle = '#00a8c6'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    data.forEach((y, i) => {
+      const px = (i / Math.max(data.length - 1, 1)) * cv.width, py = (1 - (y + 1) / 2) * cv.height
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)
+    })
+    ctx.stroke()
+  }
+
+  // browser (deck 1 = A, deck 2 = B; loading only works on a paused deck, Pd enforces it too)
+  function renderList() {
+    const q = $('#search').value.toLowerCase()
+    const frag = document.createDocumentFragment()
+    songs.forEach((p, i) => {
+      const t = name(p)
+      if (q && !t.toLowerCase().includes(q)) return
+      const li = document.createElement('li')
+      li.dataset.i = i
+      li.innerHTML = '<span class="n num"></span><span class="t"></span><button class="a">A</button><button class="b">B</button>'
+      $('.n', li).textContent = i + 1
+      $('.t', li).textContent = t
+      frag.append(li)
+    })
+    $('#list').replaceChildren(frag)
+    $('#folderName').textContent = songs.length ? `${songs.length} songs · ${songs[0].split('/').slice(0, -1).join('/')}` : 'No songs: choose a folder with .wav or .aif files'
+    markSel(true)
+    paintLoadButtons()
+  }
+  let lastSel = -1
+  function markSel(force) {
+    const sel = v('sel') ?? 0
+    if (sel === lastSel && !force) return
+    lastSel = sel
+    $('li.sel')?.classList.remove('sel')
+    const li = $(`li[data-i="${sel}"]`)
+    li?.classList.add('sel')
+    li?.scrollIntoView({ block: 'nearest' })
+  }
+  function paintLoadButtons() {
+    for (const [d, c] of [[1, 'a'], [2, 'b']]) {
+      const busy = !v('pd') || !!v(`d${d}-state`)
+      document.querySelectorAll(`li button.${c}`).forEach((b) => (b.disabled = busy))
+    }
+  }
+  $('#list').onclick = (e) => {
+    const li = e.target.closest('li')
+    if (!li) return
+    if (e.target.tagName === 'BUTTON') send(`web-browser load ${e.target.classList.contains('a') ? 1 : 2} ${li.dataset.i}`)
+    else send(`web-browser select ${li.dataset.i}`)
+  }
+  $('#search').oninput = renderList
+  $('#search').onkeydown = (e) => {
+    const first = $('#list li')
+    if (e.key === 'Enter' && first) send(`web-browser select ${first.dataset.i}`)
+  }
+
+  // folder picker
+  const dlg = $('#dlg')
+  let dirNow = ''
+  async function openDir(path = '') {
+    const r = await (await fetch('/dirs?path=' + encodeURIComponent(path))).json()
+    if (r.error) return
+    dirNow = r.path
+    $('#dirPath').textContent = `${r.path} · ${r.audio} song${r.audio === 1 ? '' : 's'} here`
+    const rows = [['..', r.parent], ...r.dirs.map((n) => [n, `${r.path}/${n}`])]
+    $('#dirs').replaceChildren(...rows.map(([label, p]) => {
+      const div = document.createElement('div')
+      div.textContent = label === '..' ? '↑ up' : `📁 ${label}`
+      div.onclick = () => openDir(p)
+      return div
+    }))
+  }
+  $('#folderBtn').onclick = async () => { await openDir(); dlg.showModal() }
+  $('#dlgCancel').onclick = () => dlg.close()
+  $('#dlgUse').onclick = async () => { await fetch('/folder', { method: 'POST', body: dirNow }); dlg.close() }
+
+  // updates from Pd, drawn once per frame
+  let dirty = true
+  function paint() {
+    if (dirty) {
+      dirty = false
+      $('#conn').classList.toggle('up', !!v('pd'))
+      $('#conn').textContent = v('pd') ? 'Pd running' : 'Pd not connected'
+      paintDeck(1); paintDeck(2); paintMixer(); paintModes(); paintScope(); markSel(); paintLoadButtons()
+    }
+    requestAnimationFrame(paint)
+  }
+  requestAnimationFrame(paint)
+
+  const events = new EventSource('/events')
+  events.onmessage = (e) => {
+    const m = JSON.parse(e.data)
+    if (m.songs) { songs = m.songs; renderList() }
+    if (m.state) { for (const k in S) delete S[k]; Object.assign(S, m.state) }
+    if (m.k) S[m.k] = m.v
+    dirty = true
+  }
+  events.onerror = () => { S.pd = [0]; dirty = true }
+</script>

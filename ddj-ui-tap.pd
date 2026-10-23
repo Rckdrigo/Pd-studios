@@ -1,0 +1,10 @@
+#N canvas 40 40 420 200 12;
+#X text 150 20 [ddj-ui-tap KEY] - sends a GUI value (X or set X) to the web page as KEY X through ddj-ui;
+#X obj 20 20 inlet;
+#X obj 20 60 route set;
+#X obj 20 100 list prepend \$1;
+#X obj 20 140 s ddj-ui;
+#X connect 1 0 2 0;
+#X connect 2 0 3 0;
+#X connect 2 1 3 0;
+#X connect 3 0 4 0;

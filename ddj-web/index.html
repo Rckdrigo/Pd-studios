@@ -6,104 +6,151 @@
 <style>
   :root {
     color-scheme: dark;
-    --bg: #0e0e10; --card: #18181c; --line: #2a2a30; --text: #ececf0; --mute: #8b8b96;
-    --a: #00a8c6; --b: #d1009e; --play: #00a060; --cue: #ff8c00; --sync: #1e78ff; --sel: #4b2a9e;
+    --bg: #0e0e10; --card: #18181c; --well: #0b0b0d; --line: #2a2a30; --raise: #26262c; --text: #ececf0; --mute: #8b8b96;
+    --a: #00a8c6; --b: #d1009e; --play: #00a060; --cue: #ff8c00; --sync: #1e78ff;
   }
   * { box-sizing: border-box }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.35 system-ui, sans-serif; -webkit-user-select: none; user-select: none }
-  header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line) }
-  header h1 { margin: 0; font-size: 15px; font-weight: 600 }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; -webkit-user-select: none; user-select: none }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line) }
+  header h1 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: .08em }
+  #note { color: var(--cue); font-size: 13px }
   #conn { margin-left: auto; color: var(--mute); font-size: 13px }
   #conn::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #c33 }
   #conn.up::before { background: var(--play) }
+  /* Pulsar glitch: a rare split on the wordmark, and a CRT flicker only while Pd is lost */
+  header h1 { animation: pg-rgb 8s steps(1) infinite }
+  #conn:not(.up) { color: var(--text); animation: pg-flicker 3.4s linear infinite }
+  @keyframes pg-rgb { 0%, 95%, 100% { text-shadow: none; transform: none } 96% { text-shadow: -2px 0 #05F9FE, 2px 0 #D646FF } 97% { text-shadow: 2px 0 #05F9FE, -2px 0 #D646FF; transform: translateX(1px) } 98% { text-shadow: -1px 0 #D646FF, 1px 0 #05F9FE; transform: none } 99% { text-shadow: 1.5px 0 #05F9FE, -1.5px 0 #D646FF } }
+  @keyframes pg-flicker { 0%, 93%, 100% { opacity: 1 } 94% { opacity: .55 } 95% { opacity: 1 } 97% { opacity: .75 } 98% { opacity: 1 } }
+  @media (prefers-reduced-motion: reduce) { header h1, #conn { animation: none !important } }
   main { display: grid; gap: 12px; padding: 12px 16px; grid-template-columns: 1fr 240px 1fr; grid-template-areas: 'a mix b' 'browser browser side' }
-  @media (max-width: 960px) { main { grid-template-columns: 1fr; grid-template-areas: 'a' 'b' 'mix' 'side' 'browser' } }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr 1fr; grid-template-areas: 'a b' 'mix side' 'browser browser' } }
   .card { min-width: 0; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px }
-  .card h2 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mute) }
+  .card h2, summary { margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--mute) }
   .num { font-variant-numeric: tabular-nums }
-  button { font: 600 13px system-ui, sans-serif; color: var(--text); background: #26262c; border: 1px solid #34343c; border-radius: 6px; padding: 8px 10px; cursor: pointer }
+  button { font: 600 13px system-ui, sans-serif; letter-spacing: .03em; color: var(--text); background: var(--raise); border: 1px solid #34343c; border-radius: 6px; padding: 8px 10px; cursor: pointer }
   button:active { transform: translateY(1px) }
   button:disabled { opacity: .3; cursor: not-allowed }
 
-  /* decks */
-  .deck { border-top: 3px solid var(--c) }
-  .deck .top { display: flex; align-items: baseline; gap: 8px }
-  .deck .letter { font-weight: 700; color: var(--c) }
-  .deck .title { flex: 1; min-width: 0; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-  .deck .stats { display: flex; gap: 14px; margin: 6px 0 8px; color: var(--mute) }
-  .deck .stats b { color: var(--text); font-weight: 600 }
-  .bar { position: relative; height: 28px; background: #0b0b0d; border: 1px solid var(--line); border-radius: 5px; cursor: pointer; touch-action: none; overflow: hidden }
+  /* decks: border and letter light up in the deck color while it plays */
+  .deck.playing { border-color: var(--c) }
+  .deck .top { display: flex; align-items: center; gap: 8px }
+  .deck .letter { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--c); border-radius: 4px; font-weight: 700; color: color-mix(in srgb, var(--c) 70%, white) }
+  .deck.playing .letter { background: var(--c); color: var(--bg) }
+  .deck .title { flex: 1; min-width: 0; font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .deck .eject { padding: 4px 8px; font-size: 11px; color: var(--mute); background: none }
+  .readout { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 8px; color: var(--mute) }
+  .readout b { font-size: 32px; font-weight: 600; line-height: 1.1; color: var(--text) }
+  .bar { position: relative; height: 32px; background: var(--well); border: 1px solid var(--line); border-radius: 5px; cursor: pointer; touch-action: none; overflow: hidden }
   .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: color-mix(in srgb, var(--c) 45%, transparent); border-right: 2px solid var(--c) }
-  .bar .cue { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--cue) }
-  .transport { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 }
+  .bar .tick { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--cue); font: normal 10px/1 system-ui, sans-serif }
+  .bar .tick::after { content: attr(data-n); position: absolute; top: 2px; left: 4px; color: var(--cue) }
+  .bar .hint { display: none; position: absolute; right: 8px; top: 8px; font-size: 11px; color: var(--mute) }
+  .deck.playing .bar .hint { display: block }
+  .transport { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 10px 0 }
   .transport .on[data-k=play] { background: var(--play); border-color: var(--play) }
   .transport .on[data-k=sync] { background: var(--sync); border-color: var(--sync) }
+  .transport .on[data-k=shift] { background: var(--text); color: var(--bg) }
   .transport [data-k=cue] { color: var(--cue) }
+  .transport .on[data-k=pfl], #phones.on { background: var(--c, var(--cue)); border-color: var(--c, var(--cue)); color: #fff }
   .pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
-  .pads button { height: 40px; color: var(--mute) }
-  .pads button.on { background: color-mix(in srgb, var(--c) 70%, black); border-color: var(--c); color: #fff }
+  .pads button { position: relative; height: 44px; color: var(--mute) }
+  .pads button.on { background: color-mix(in srgb, var(--c) 70%, black); color: #fff }
+  .shift .pads button.on { outline: 1px dashed var(--text); outline-offset: -4px }  /* tap now deletes */
+  .pads button.lit::after { content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--c) }  /* controller pad LED */
+  .shift .pads button.lit::after, .pads button.on.lit::after { background: #fff }
   .knobs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; text-align: center; color: var(--mute); font-size: 11px }
-  .meter { height: 6px; margin-top: 3px; background: #0b0b0d; border-radius: 3px; overflow: hidden }
+  .meter { height: 6px; margin-top: 3px; background: var(--well); border-radius: 3px; overflow: hidden }
+  .meter.bi { background: linear-gradient(90deg, transparent calc(50% - 1px), var(--line) 0 calc(50% + 1px), transparent 0), var(--well) }
   .meter i { display: block; height: 100%; width: 0; background: var(--c) }
 
   /* mixer + side */
-  .mixer { display: flex; flex-direction: column; gap: 10px; grid-area: mix }
-  .vu { height: 10px; background: #0b0b0d; border-radius: 5px; overflow: hidden }
+  .mixer { display: flex; flex-direction: column; gap: 12px; grid-area: mix }
+  .vu-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--mute) }
+  .vu { position: relative; flex: 1; height: 12px; background: var(--well); border-radius: 3px; overflow: hidden }
   .vu i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--play) 70%, #e5c100 85%, #e53935) }
-  input[type=range] { width: 100%; accent-color: var(--cue) }
-  .xf-labels { display: flex; justify-content: space-between; color: var(--mute); font-weight: 700 }
-  #trfx.on { background: var(--cue); border-color: var(--cue); color: #000 }
+  .vu b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text) }
+  .xf-labels { display: flex; justify-content: space-between; font-weight: 700 }
+  .xf-labels :first-child { color: color-mix(in srgb, var(--a) 70%, white) }
+  .xf-labels :last-child { color: color-mix(in srgb, var(--b) 70%, white) }
+  input[type=range] { width: 100%; height: 36px; margin: 0; background: none; -webkit-appearance: none; appearance: none }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--a), var(--b)) }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--a), var(--b)) }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 34px; margin-top: -14px; border: 1px solid var(--bg); border-radius: 4px; background: #d8d8e0 }
+  input[type=range]::-moz-range-thumb { width: 22px; height: 34px; border: 1px solid var(--bg); border-radius: 4px; background: #d8d8e0 }
+  #trfx.on { background: var(--text); border-color: var(--text); color: var(--bg) }
   .side { grid-area: side; display: flex; flex-direction: column; gap: 12px }
+  summary { margin: 0; cursor: pointer }
+  details[open] summary { margin-bottom: 10px }
+  .setup { display: flex; flex-direction: column; gap: 8px }
   .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
-  .modes button { padding: 8px 4px; font-size: 12px }
-  .modes button.on { background: var(--sel); border-color: #7a58d6 }
-  canvas { width: 100%; height: 120px; display: block; background: #0b0b0d; border-radius: 5px }
+  .modes button { padding: 8px 4px; font-size: 11px; text-transform: uppercase }
+  .modes button.on { background: var(--text); color: var(--bg) }
+  .keys { margin: 4px 0 0; color: var(--mute); font-size: 11px }
+  canvas { width: 100%; height: 120px; display: block; background: var(--well); border-radius: 5px }
 
   /* browser */
   .browser { grid-area: browser; display: flex; flex-direction: column; height: 60vh; min-height: 320px }
   .browser .tools { display: flex; gap: 8px; margin-bottom: 8px }
-  #search { flex: 1; min-width: 0; padding: 8px 10px; font: inherit; color: var(--text); background: #0b0b0d; border: 1px solid var(--line); border-radius: 6px; -webkit-user-select: text; user-select: text }
-  #folderName { color: var(--mute); font-size: 12px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  #search { flex: 1; min-width: 0; padding: 8px 10px; font: inherit; color: var(--text); background: var(--well); border: 1px solid var(--line); border-radius: 6px; -webkit-user-select: text; user-select: text }
+  .status { display: flex; gap: 12px; margin-bottom: 6px; color: var(--mute); font-size: 12px }
+  #folderName { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  #loadNote { color: var(--cue) }
   ol { flex: 1; margin: 0; padding: 0; overflow-y: auto; list-style: none; border-top: 1px solid var(--line) }
-  li { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-bottom: 1px solid #1f1f24; cursor: pointer }
-  li.sel { background: var(--sel) }
+  li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-bottom: 1px solid #1f1f24; cursor: pointer }
+  li.sel { background: #2c2c36; box-shadow: inset 0 0 0 1px #4a4a56 }
   li .n { width: 4ch; text-align: right; color: var(--mute) }
   li .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-  li button { width: 34px; padding: 6px 0; border: 0; color: #fff }
+  li button { width: 44px; padding: 7px 0; border: 0; color: #fff }
   li button.a { background: var(--a) }
   li button.b { background: var(--b) }
+
+  /* phone: browse and load first, compact decks */
+  @media (max-width: 640px) {
+    main { grid-template-columns: 1fr; grid-template-areas: 'browser' 'a' 'b' 'mix' 'side' }
+    .browser { height: 50vh; min-height: 280px }
+    .knobs, #scopeCard { display: none }
+    .readout b { font-size: 28px }
+  }
 
   dialog { width: min(520px, 92vw); padding: 0; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 10px }
   dialog::backdrop { background: #000a }
   dialog header { border: 0 }
   #dirPath { padding: 0 16px 8px; color: var(--mute); font-size: 12px; word-break: break-all }
   #dirs { max-height: 50vh; overflow-y: auto; border-top: 1px solid var(--line) }
-  #dirs div { padding: 9px 16px; border-bottom: 1px solid #1f1f24; cursor: pointer }
+  #dirs div { padding: 11px 16px; border-bottom: 1px solid #1f1f24; cursor: pointer }
   #dirs div:hover { background: #222228 }
   dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px }
 </style>
 
-<header><h1>DDJ-200</h1><span id="conn">connecting…</span></header>
+<header><h1>DDJ-200</h1><span id="note" role="status"></span><span id="conn">connecting…</span></header>
 <main>
   <section class="card deck" id="deck1" style="--c: var(--a); grid-area: a"></section>
   <section class="card deck" id="deck2" style="--c: var(--b); grid-area: b"></section>
 
   <section class="card mixer">
     <h2>Mixer</h2>
-    <div class="vu"><i id="vu"></i></div>
-    <div><div class="xf-labels"><span>A</span><span>B</span></div><input id="xf" type="range" min="0" max="127" value="64"></div>
-    <button id="trfx">Transition FX</button>
-    <button id="calibrate">Calibrate</button>
+    <div class="vu-row">MASTER<div class="vu"><i id="vu"></i><b id="peak"></b></div></div>
+    <div><div class="xf-labels"><span>A</span><span>B</span></div><input id="xf" type="range" min="0" max="127" value="64" aria-label="crossfader"></div>
+    <button id="trfx">TRANSITION FX</button>
+    <button id="phones">MASTER CUE</button>
   </section>
 
   <div class="side">
-    <section class="card"><h2>Pad lights</h2><div class="modes" id="modes"></div></section>
-    <section class="card"><h2>Scope</h2><canvas id="scope" width="480" height="120"></canvas></section>
+    <section class="card" id="scopeCard"><h2>Scope</h2><canvas id="scope" width="480" height="120"></canvas></section>
+    <details class="card">
+      <summary>Setup</summary>
+      <div class="setup">
+        <h2>Pad lights</h2><div class="modes" id="modes"></div>
+        <button id="calibrate">CALIBRATE</button>
+        <p class="keys">Keys: ↑ ↓ browse · A / B load · / search</p>
+      </div>
+    </details>
   </div>
 
   <section class="card browser">
     <div class="tools"><input id="search" type="search" placeholder="Search songs…" autocomplete="off"><button id="folderBtn">Folder…</button></div>
-    <div id="folderName"></div>
+    <div class="status"><span id="folderName"></span><span id="loadNote"></span></div>
     <ol id="list"></ol>
   </section>
 </main>
@@ -116,16 +163,16 @@
 </dialog>
 
 <template id="deckTpl">
-  <div class="top"><span class="letter"></span><span class="title">—</span></div>
-  <div class="stats num"><span><b data-v="time">0:00</b> / <span data-v="length">0:00</span></span><span><b data-v="bpm">—</b> bpm</span><span data-v="rate">0.0%</span></div>
-  <div class="bar"><div class="fill"></div></div>
+  <div class="top"><span class="letter"></span><span class="title">—</span><button class="eject">EJECT</button></div>
+  <div class="readout num"><b data-v="left">−0:00</b><span><span data-v="time">0:00</span> / <span data-v="length">0:00</span></span><span><span data-v="bpm">—</span> BPM</span><span data-v="rate">0.0%</span></div>
+  <div class="bar"><div class="fill"></div><span class="hint">hold to seek</span></div>
   <div class="transport">
-    <button data-k="cue">CUE</button><button data-k="play">PLAY</button><button data-k="sync">SYNC</button><button data-k="eject">EJECT</button>
+    <button data-k="shift" title="next pad tap deletes its cue">SHIFT</button><button data-k="cue">CUE</button><button data-k="play">PLAY</button><button data-k="sync">SYNC</button><button data-k="pfl" title="headphone cue">PHONES</button>
   </div>
   <div class="pads"></div>
   <div class="knobs">
-    <div>LOW<div class="meter"><i data-m="loweq"></i></div></div><div>MID<div class="meter"><i data-m="mideq"></i></div></div>
-    <div>HIGH<div class="meter"><i data-m="higheq"></i></div></div><div>VOL<div class="meter"><i data-m="volume"></i></div></div>
+    <div>LOW<div class="meter bi"><i data-m="loweq"></i></div></div><div>MID<div class="meter bi"><i data-m="mideq"></i></div></div>
+    <div>HIGH<div class="meter bi"><i data-m="higheq"></i></div></div><div>VOL<div class="meter"><i data-m="volume"></i></div></div>
   </div>
 </template>
 
@@ -134,12 +181,20 @@
   const $ = (s, el = document) => el.querySelector(s)
   const S = {}                      // latest values from Pd, e.g. S['d1-pos'] = [0.42]
   let songs = []
+  let dirty = true
   const v = (k, i = 0) => S[k]?.[i]
+  let noteTimer
+  const note = (t) => { $('#note').textContent = t; clearTimeout(noteTimer); noteTimer = setTimeout(() => ($('#note').textContent = ''), 3000) }
   const send = (msg) => fetch('/cmd', { method: 'POST', body: msg })
+    .then((r) => r.ok || note(v('pd') ? `Not sent: ${msg}` : 'Pd not connected'))
+    .catch(() => note('Server not reachable'))
   const name = (p) => String(p ?? '').split('/').pop().replace(/\.[^.]+$/, '')
+  const secs = (t) => { const [m, s] = String(t ?? '0:00').split(':'); return +m * 60 + +s || 0 }
+  const toggle = (b, on) => { b.classList.toggle('on', on); b.setAttribute('aria-pressed', on) }
   const throttle = (fn, ms = 40) => { let t = 0; return (...a) => { const now = Date.now(); if (now - t >= ms) { t = now; fn(...a) } } }
 
-  // decks
+  // decks; SHIFT latches for one pad tap (touch has no shift key), like holding SHIFT on the controller
+  const shift = { 1: false, 2: false }
   for (const d of [1, 2]) {
     const el = $(`#deck${d}`)
     el.append($('#deckTpl').content.cloneNode(true))
@@ -147,52 +202,97 @@
     for (let i = 1; i <= 8; i++) {
       const b = document.createElement('button')
       b.textContent = i
-      b.title = 'tap: set / jump to cue · right-click or shift-click: delete'
-      b.onclick = (e) => send(`d${d}-hotcue-${e.shiftKey ? 'off' : 'on'} ${i}`)
+      b.title = 'tap: set / jump to cue · SHIFT, shift-click or right-click: delete'
+      b.onclick = (e) => {
+        send(`d${d}-hotcue-${e.shiftKey || shift[d] ? 'off' : 'on'} ${i}`)
+        shift[d] = false
+        dirty = true
+      }
       b.oncontextmenu = (e) => { e.preventDefault(); send(`d${d}-hotcue-off ${i}`) }
       $('.pads', el).append(b)
+      const t = document.createElement('i')
+      t.className = 'tick'
+      t.dataset.n = i
+      $('.bar', el).append(t)
     }
     el.querySelectorAll('.transport button').forEach((b) => {
-      b.onclick = () => send(b.dataset.k === 'eject' ? `d${d}-eject` : `d${d}-${b.dataset.k} 127`)
+      b.onclick = () => {
+        if (b.dataset.k === 'shift') { shift[d] = !shift[d]; dirty = true }
+        else send(`d${d}-${b.dataset.k} 127`)
+      }
     })
+    $('.eject', el).onclick = () => send(`d${d}-eject`)
+    // a paused deck seeks on tap; a playing one only after a 300 ms hold, so a stray touch can't jump the track
     const bar = $('.bar', el)
+    let armedAt = 0
     const seek = throttle((e) => {
       const r = bar.getBoundingClientRect()
       send(`d${d}-seek-to ${Math.min(Math.max((e.clientX - r.left) / r.width, 0), 0.999).toFixed(4)}`)
     })
-    bar.onpointerdown = (e) => { bar.setPointerCapture(e.pointerId); seek(e) }
-    bar.onpointermove = (e) => { if (bar.hasPointerCapture(e.pointerId)) seek(e) }
+    bar.onpointerdown = (e) => {
+      bar.setPointerCapture(e.pointerId)
+      armedAt = Date.now() + (v(`d${d}-play`) ? 300 : 0)
+      if (!v(`d${d}-play`)) seek(e)
+    }
+    bar.onpointermove = (e) => { if (bar.hasPointerCapture(e.pointerId) && Date.now() >= armedAt) seek(e) }
+    bar.onpointerup = (e) => { if (Date.now() >= armedAt) seek(e) }
   }
 
   function paintDeck(d) {
     const el = $(`#deck${d}`), k = (key) => `d${d}-${key}`
-    const title = v(k('title'))
+    const title = v(k('title')), playing = !!v(k('play'))
+    el.classList.toggle('playing', playing)
+    el.classList.toggle('shift', shift[d])
     $('.title', el).textContent = title && title !== '-' ? name(title) : '—'
     $('[data-v=time]', el).textContent = v(k('time')) ?? '0:00'
     $('[data-v=length]', el).textContent = v(k('length')) ?? '0:00'
+    const left = Math.max(secs(v(k('length'))) - secs(v(k('time'))), 0)
+    $('[data-v=left]', el).textContent = `−${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
     $('[data-v=bpm]', el).textContent = v(k('bpm')) || '—'
     const rate = ((v(k('rate')) ?? 1) - 1) * 100
     $('[data-v=rate]', el).textContent = `${rate > 0 ? '+' : ''}${rate.toFixed(1)}%`
     $('.fill', el).style.width = `${(v(k('pos')) ?? 0) * 100}%`
-    $('[data-k=play]', el).classList.toggle('on', !!v(k('play')))
-    $('[data-k=sync]', el).classList.toggle('on', !!v(k('sync')))
-    const cues = S[k('cues')] ?? []
-    el.querySelectorAll('.pads button').forEach((b, i) => b.classList.toggle('on', cues[i] > 0))
-    el.querySelectorAll('[data-m]').forEach((m) => { m.style.width = `${((v(k(m.dataset.m)) ?? 0) / 127) * 100}%` })
+    $('.eject', el).disabled = playing
+    $('.eject', el).title = playing ? 'pause the deck to eject' : ''
+    toggle($('[data-k=play]', el), playing)
+    toggle($('[data-k=sync]', el), !!v(k('sync')))
+    toggle($('[data-k=pfl]', el), !!v(k('phones')))
+    toggle($('[data-k=shift]', el), shift[d])
+    const cues = S[k('cues')] ?? []   // ddjhcN stores cue phase + 1, 0 = empty
+    const lights = S['pad-lights'] ?? []
+    el.querySelectorAll('.pads button').forEach((b, i) => {
+      b.classList.toggle('on', cues[i] > 0)
+      b.classList.toggle('lit', lights[(d - 1) * 8 + i] > 0)
+    })
+    el.querySelectorAll('.tick').forEach((t, i) => {
+      t.hidden = !(cues[i] > 0)
+      t.style.left = `${(cues[i] - 1) * 100}%`
+    })
+    el.querySelectorAll('[data-m]').forEach((m) => {
+      const x = (v(k(m.dataset.m)) ?? (m.dataset.m === 'volume' ? 0 : 64)) / 127
+      if (m.dataset.m === 'volume') m.style.width = `${x * 100}%`
+      else { m.style.marginLeft = `${Math.min(x, 0.5) * 100}%`; m.style.width = `${Math.abs(x - 0.5) * 100}%` }  // EQ knobs are centred
+    })
   }
 
   // mixer
   const xf = $('#xf')
   let draggingXf = false
+  let peak = 0
   xf.oninput = throttle(() => send(`master-crossfader ${xf.value}`))
   xf.onpointerdown = () => (draggingXf = true)
   xf.onpointerup = () => { draggingXf = false; send(`master-crossfader ${xf.value}`) }
   $('#trfx').onclick = () => send('master-trfx 127')
   $('#calibrate').onclick = () => send('ddj-calibrate')
+  $('#phones').onclick = () => send('master-headmix 127')
   function paintMixer() {
     if (!draggingXf && S['master-crossfader']) xf.value = v('master-crossfader')
-    $('#trfx').classList.toggle('on', !!v('master-trfx'))
-    $('#vu').style.width = `${Math.min(Math.max(((v('master-level') ?? 0) - 40) / 60, 0), 1) * 100}%`
+    toggle($('#trfx'), !!v('master-trfx'))
+    toggle($('#phones'), !!v('master-phones'))
+    const level = Math.min(Math.max(((v('master-level') ?? 0) - 40) / 60, 0), 1)
+    peak = Math.max(level, peak - 0.005)
+    $('#vu').style.width = `${level * 100}%`
+    $('#peak').style.left = `calc(${peak * 100}% - 2px)`
   }
 
   // pad lights
@@ -203,14 +303,15 @@
     b.onclick = () => send(`lights-mode ${i}`)
     $('#modes').append(b)
   })
-  const paintModes = () => $('#modes').querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === (v('lights-mode') ?? 0)))
+  const paintModes = () => $('#modes').querySelectorAll('button').forEach((b, i) => toggle(b, i === (v('lights-mode') ?? 0)))
 
   // scope
   const cv = $('#scope'), ctx = cv.getContext('2d')
+  const scopeColor = getComputedStyle(document.documentElement).getPropertyValue('--a')
   function paintScope() {
     const data = S.scope ?? []
     ctx.clearRect(0, 0, cv.width, cv.height)
-    ctx.strokeStyle = '#00a8c6'
+    ctx.strokeStyle = scopeColor
     ctx.lineWidth = 1.5
     ctx.beginPath()
     data.forEach((y, i) => {
@@ -229,7 +330,7 @@
       if (q && !t.toLowerCase().includes(q)) return
       const li = document.createElement('li')
       li.dataset.i = i
-      li.innerHTML = '<span class="n num"></span><span class="t"></span><button class="a">A</button><button class="b">B</button>'
+      li.innerHTML = '<span class="n num"></span><span class="t"></span><button class="a" aria-label="load into deck A">A</button><button class="b" aria-label="load into deck B">B</button>'
       $('.n', li).textContent = i + 1
       $('.t', li).textContent = t
       frag.append(li)
@@ -250,10 +351,13 @@
     li?.scrollIntoView({ block: 'nearest' })
   }
   function paintLoadButtons() {
+    const busy = []
     for (const [d, c] of [[1, 'a'], [2, 'b']]) {
-      const busy = !v('pd') || !!v(`d${d}-state`)
-      document.querySelectorAll(`li button.${c}`).forEach((b) => (b.disabled = busy))
+      const off = !v('pd') || !!v(`d${d}-state`)
+      if (v('pd') && off) busy.push(c.toUpperCase())
+      document.querySelectorAll(`li button.${c}`).forEach((b) => (b.disabled = off))
     }
+    $('#loadNote').textContent = !v('pd') ? 'Pd not connected' : busy.length ? `Pause deck ${busy.join(' / ')} to load` : ''
   }
   $('#list').onclick = (e) => {
     const li = e.target.closest('li')
@@ -265,6 +369,19 @@
   $('#search').onkeydown = (e) => {
     const first = $('#list li')
     if (e.key === 'Enter' && first) send(`web-browser select ${first.dataset.i}`)
+    if (e.key === 'Escape' || e.key === 'Enter') e.target.blur()
+  }
+
+  // keys: ↑ ↓ browse the visible list, A / B load the selected song, / search
+  document.onkeydown = (e) => {
+    if (e.target.matches('input') || e.metaKey || e.ctrlKey || e.altKey || dlg.open) return
+    const lis = [...document.querySelectorAll('#list li')], at = lis.indexOf($('li.sel'))
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const li = lis[Math.min(Math.max(at + (e.key === 'ArrowDown' ? 1 : -1), 0), lis.length - 1)]
+      if (li) send(`web-browser select ${li.dataset.i}`)
+    } else if ((e.key === 'a' || e.key === 'b') && at >= 0) $(`button.${e.key}`, lis[at]).click()
+    else if (e.key === '/') { e.preventDefault(); $('#search').focus() }
   }
 
   // folder picker
@@ -272,23 +389,26 @@
   let dirNow = ''
   async function openDir(path = '') {
     const r = await (await fetch('/dirs?path=' + encodeURIComponent(path))).json()
-    if (r.error) return
+    if (r.error) return ($('#dirPath').textContent = `Can't open that folder (only folders inside your home folder)`)
     dirNow = r.path
     $('#dirPath').textContent = `${r.path} · ${r.audio} song${r.audio === 1 ? '' : 's'} here`
     const rows = [['..', r.parent], ...r.dirs.map((n) => [n, `${r.path}/${n}`])]
     $('#dirs').replaceChildren(...rows.map(([label, p]) => {
       const div = document.createElement('div')
-      div.textContent = label === '..' ? '↑ up' : `📁 ${label}`
+      div.textContent = label === '..' ? '↑ up' : `${label}/`
       div.onclick = () => openDir(p)
       return div
     }))
   }
   $('#folderBtn').onclick = async () => { await openDir(); dlg.showModal() }
   $('#dlgCancel').onclick = () => dlg.close()
-  $('#dlgUse').onclick = async () => { await fetch('/folder', { method: 'POST', body: dirNow }); dlg.close() }
+  $('#dlgUse').onclick = async () => {
+    const r = await fetch('/folder', { method: 'POST', body: dirNow })
+    if (!r.ok) return ($('#dirPath').textContent = (await r.json().catch(() => ({}))).error ?? "Couldn't use that folder")
+    dlg.close()
+  }
 
   // updates from Pd, drawn once per frame
-  let dirty = true
   function paint() {
     if (dirty) {
       dirty = false

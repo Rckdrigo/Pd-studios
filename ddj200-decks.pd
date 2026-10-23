@@ -1,4 +1,4 @@
-#N canvas 1843 192 860 540 12;
+#N canvas 1843 192 860 640 12;
 #X text 20 10 DDJ-200 two-deck DJ. Quit rekordbox first \, pick the audio output in Media > Audio Settings and set MIDI in + out to the DDJ-200 in Media > MIDI Settings.;
 #X obj 20 60 ddj200-map;
 #X obj 130 60 ddj-lightshow;
@@ -7,7 +7,7 @@
 #X obj 360 270 ddj-mixer;
 #X obj 20 270 ddj-browser;
 #X obj 720 400 scope;
-#X text 20 400 controller: jog edge = browse songs \, SHIFT+jog = move in the song \, touch the top = scratch \, SYNC = beat sync \, SHIFT+SYNC = load into a paused deck \, TRANSITION FX = echo on the deck you fade out \, CFX = filter \, pads = hot cues;
+#X text 20 500 controller: jog edge = browse songs \, SHIFT+jog = move in the song \, touch the top = scratch \, SYNC = beat sync \, SHIFT+SYNC = load into a paused deck \, TRANSITION FX = echo on the deck you fade out \, CFX = filter \, pads = hot cues;
 #X connect 3 0 5 0;
 #X connect 3 1 5 1;
 #X connect 4 0 5 2;

@@ -20,7 +20,7 @@
 #X obj 20 265 expr if(padmode\$1 && lp\$1len > 0 && (lp\$1bpm > 0 || padmode\$1==3) \, \$f1 \, 0);
 #X obj 20 290 sel 0;
 #X obj 70 315 t f b;
-#X obj 70 345 expr if(padmode\$1==1 && lp\$1on==1 && lp\$1pad==\$f1 \, 0 \, padmode\$1) \; if(padmode\$1==1 && lp\$1on==1 && lp\$1pad==\$f1 \, 0 \, \$f1) \; pow(2 \, \$f1-if(padmode\$1==1 \, 3 \, 5))*60/lp\$1bpm*max(lp\$1sr \, 1)/lp\$1len \; if(padmode\$1==1 && lp\$1on==1 \, lp\$1s \, max(lp\$1fb+floor((lp\$1p*lp\$1len/max(lp\$1sr \, 1)-lp\$1fb)/(min(pow(2 \, \$f1-if(padmode\$1==1 \, 3 \, 5)) \, 1)*60/lp\$1bpm))*min(pow(2 \, \$f1-if(padmode\$1==1 \, 3 \, 5)) \, 1)*60/lp\$1bpm \, 0)*max(lp\$1sr \, 1)/lp\$1len) \; if(padmode\$1==1 && lp\$1on==1 && lp\$1p>=lp\$1s \, lp\$1s+fmod(lp\$1p+lp\$1f/max(lp\$1sr \, 1)-lp\$1s \, max(lp\$1L \, 1e-09)) \, -1);
+#X obj 70 345 expr if(padmode\$1==1 && lp\$1on==1 && lp\$1pad==\$f1 \, 0 \, padmode\$1) \; if(padmode\$1==1 && lp\$1on==1 && lp\$1pad==\$f1 \, 0 \, \$f1) \; pow(2 \, \$f1-if(padmode\$1==1 \, 3 \, 5))*60/lp\$1bpm*max(lp\$1sr \, 1)/lp\$1len \; if(padmode\$1==1 && lp\$1on==1 \, lp\$1s \, max(lp\$1fb+floor((lp\$1p*lp\$1len/max(lp\$1sr \, 1)-lp\$1fb)/(min(pow(2 \, \$f1-if(padmode\$1==1 \, 3 \, 5)) \, 4)*60/lp\$1bpm)+lp\$1snap*0.5)*min(pow(2 \, \$f1-if(padmode\$1==1 \, 3 \, 5)) \, 4)*60/lp\$1bpm \, 0)*max(lp\$1sr \, 1)/lp\$1len) \; if(padmode\$1==1 && lp\$1on==1 && lp\$1p>=lp\$1s \, lp\$1s+fmod(lp\$1p+lp\$1f/max(lp\$1sr \, 1)-lp\$1s \, max(lp\$1L \, 1e-09)) \, -1);
 #X obj 70 500 pack 0 0 0 0 0;
 #X obj 70 525 unpack 0 0 0 0 0;
 #X obj 70 600 t b f f;
@@ -57,7 +57,7 @@
 #X obj 1100 275 t b b;
 #X obj 1100 305 expr if(lp\$1on==1 && lp\$1p>=lp\$1s+lp\$1L \, lp\$1s+fmod(lp\$1p+lp\$1f/max(lp\$1sr \, 1)-lp\$1s \, max(lp\$1L \, 1e-09)) \, -1);
 #X obj 1100 330 moses 0;
-#X text 20 770 pads: beat loop = 1/4 1/2 1 2 4 8 16 32 beats (latching: the lit pad again or SHIFT+pad exits \, another pad resizes). loop roll = 1/16 1/8 1/4 1/2 1 2 4 8 beats while held \, then the track carries on where it would have been. loops start on the beat grid (or the roll grid under 1 beat) so engaging never jumps;
+#X text 20 770 pads: beat loop = 1/4 1/2 1 2 4 8 16 32 beats (latching: the lit pad again or SHIFT+pad exits \, another pad resizes). loop roll = 1/16 1/8 1/4 1/2 1 2 4 8 beats while held \, then the track carries on where it would have been. loops of 4+ beats start on the bar (4 beats from the first beat) \, shorter ones on their own grid. d\$1-loopsnap 0 starts on the grid line before the press \, 1 on the closest one (a loop can then begin a moment later) so engaging never jumps;
 #X text 1000 400 the wrap is done per sample by expr~. a beat loop also moves the phasor back into the loop (every 50 ms and on exit) so the track position stays in the loop and the next block plays on seamlessly. cue \, seek \, eject \, load or a mode change exit the loop;
 #X obj 300 315 expr if(padmode\$1==3 \, -\$f1 \, \$f1);
 #X obj 300 340 moses 0;
@@ -74,6 +74,10 @@
 #X obj 620 470 ddj-ui-tap d\$1-loopout;
 #X obj 580 130 ddj-ui-tap d\$1-tbpm;
 #X obj 760 130 ddj-ui-tap d\$1-firstbeat;
+#X obj 1100 420 r d\$1-loopsnap;
+#X obj 1100 445 t f f;
+#X obj 1160 475 v lp\$1snap;
+#X obj 1100 505 ddj-ui-tap d\$1-loopsnap;
 #X connect 1 0 13 0;
 #X connect 1 0 15 0;
 #X connect 2 0 7 0;
@@ -164,3 +168,7 @@
 #X connect 69 0 72 0;
 #X connect 5 0 73 0;
 #X connect 6 0 74 0;
+#X connect 75 0 76 0;
+#X connect 76 1 77 0;
+#X connect 76 0 78 0;
+#X connect 43 0 76 0;

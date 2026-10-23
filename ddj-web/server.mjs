@@ -99,7 +99,7 @@ connectPd()
 
 // the page may only send what the controller could send
 const allowed = [
-  /^d[12]-(play|cue|sync|eject|hotcue-on|hotcue-off|pad-up|padmode|seek-to|pfl)( -?[\d.]+)?$/,
+  /^d[12]-(play|cue|sync|eject|hotcue-on|hotcue-off|pad-up|padmode|loopsnap|seek-to|pfl)( -?[\d.]+)?$/,
   /^(master-crossfader|master-trfx|master-headmix|lights-mode)( -?[\d.]+)$/,
   /^ddj-calibrate$/,
   /^web-browser (select \d+|load [12] \d+)$/,

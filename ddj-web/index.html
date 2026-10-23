@@ -96,7 +96,7 @@
   .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
   .modes button { padding: 8px 4px; font-size: 11px; text-transform: uppercase }
   .modes button.on, .padmodes button.on { background: var(--text); color: var(--bg) }
-  .padmodes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 6px }
+  .padmodes { display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 6px; margin-bottom: 6px }
   .padmodes button { padding: 5px 4px; font-size: 11px; text-transform: uppercase }
   .keys { margin: 4px 0 0; color: var(--mute); font-size: 11px }
   canvas { width: 100%; height: 120px; display: block; background: var(--well); border-radius: 5px }
@@ -182,7 +182,7 @@
   <div class="transport">
     <button data-k="shift" title="next pad tap deletes its cue">SHIFT</button><button data-k="cue">CUE</button><button data-k="play">PLAY</button><button data-k="sync">SYNC</button><button data-k="pfl" title="headphone cue">PHONES</button>
   </div>
-  <div class="padmodes"><button data-pm="0">Hot cue</button><button data-pm="1">Beat loop</button><button data-pm="2">Loop roll</button><button data-pm="3">Manual</button></div>
+  <div class="padmodes"><button data-pm="0">Hot cue</button><button data-pm="1">Beat loop</button><button data-pm="2">Loop roll</button><button data-pm="3">Manual</button><button data-snap title="loops start on the closest beat or bar instead of the one before">Nearest</button></div>
   <div class="pads"></div>
   <div class="knobs">
     <div>LOW<div class="meter bi"><i data-m="loweq"></i></div></div><div>MID<div class="meter bi"><i data-m="mideq"></i></div></div>
@@ -246,7 +246,8 @@
     $('.eject', el).onclick = () => send(`d${d}-eject`)
     el.querySelectorAll('.zoomctl button').forEach((b) => (b.onclick = () => { zoomSpan[d] = Math.min(Math.max(zoomSpan[d] * b.dataset.z, 1), 32) }))
     $('.zoom', el).onwheel = (e) => { e.preventDefault(); zoomSpan[d] = Math.min(Math.max(zoomSpan[d] * (e.deltaY > 0 ? 1.25 : 0.8), 1), 32) }
-    el.querySelectorAll('.padmodes button').forEach((b) => (b.onclick = () => send(`d${d}-padmode ${b.dataset.pm}`)))
+    el.querySelectorAll('[data-pm]').forEach((b) => (b.onclick = () => send(`d${d}-padmode ${b.dataset.pm}`)))
+    $('[data-snap]', el).onclick = () => send(`d${d}-loopsnap ${v(`d${d}-loopsnap`) ? 0 : 1}`)
     // a paused deck seeks on tap; a playing one only after a 300 ms hold, so a stray touch can't jump the track
     const bar = $('.bar', el)
     let armedAt = 0
@@ -375,7 +376,8 @@
     const cues = S[k('cues')] ?? []   // ddjhcN stores cue phase + 1, 0 = empty
     const lights = S['pad-lights'] ?? []
     const mode = v(k('padmode')) ?? 0, loopPad = v(k('looppad')) ?? 0
-    el.querySelectorAll('.padmodes button').forEach((b) => toggle(b, +b.dataset.pm === mode))
+    el.querySelectorAll('[data-pm]').forEach((b) => toggle(b, +b.dataset.pm === mode))
+    toggle($('[data-snap]', el), !!v(k('loopsnap')))
     el.querySelectorAll('.pads button').forEach((b, i) => {
       b.textContent = padLabels[mode][i]
       b.title = padTitles[mode]
